@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
 
+import '../data/content_manifest.dart';
+import '../data/courses.dart';
+
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final hmacShort = ContentManifest.contentHmacHex.length >= 12
+        ? '${ContentManifest.contentHmacHex.substring(0, 12)}…'
+        : ContentManifest.contentHmacHex;
     return Scaffold(
       appBar: AppBar(title: const Text('O aplikaci')),
       body: ListView(
@@ -31,17 +38,67 @@ class AboutScreen extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Aplikace vzniká jako studijní pomůcka pro studenty VŠB – '
-            'Technické univerzity Ostrava. Nejde o oficiální produkt univerzity '
-            'a nepoužívá oficiální loga.',
+            'Aplikace vzniká jako studijní pomůcka pro studenty programu '
+            'mechatroniky na VŠB – Technické univerzitě Ostrava (VŠB–TUO). '
+            'Nejde o oficiální produkt univerzity a nepoužívá oficiální loga '
+            'ani oficiální katalogové kódy předmětů.',
           ),
           const SizedBox(height: 24),
-          const Text('Verze 1.0.0'),
+          Text(
+            'Mapa programu (orientační)',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Mechatronika spojuje mechaniku, elektroniku, řízení a software. '
+            'MechaLearn mapuje tyto oblasti jako kurzy v aplikaci:',
+          ),
+          const SizedBox(height: 12),
+          ...allCourses.map((c) {
+            final status = c.isPlaceholder
+                ? 'placeholder — obsah od vyučujících později'
+                : 'autorovaný obsah (matematika)';
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(c.iconEmoji),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '${c.title}\n$status',
+                      style: TextStyle(color: cs.onSurfaceVariant, height: 1.35),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
           const SizedBox(height: 8),
           Text(
-            'Matematický kurz je plně autorován. Ostatní kurzy jsou prázdné '
-            'placeholdery pro budoucí materiály od vyučujících (JSON / Dart balíčky).',
-            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+            'Popisky kurzů mimo matematiku jsou záměrně obecné placeholdery — '
+            'nejsou to ověřené oficiální ID předmětů VŠB–TUO.',
+            style: TextStyle(
+              color: cs.onSurfaceVariant,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+          const SizedBox(height: 24),
+          const Text('Verze aplikace 1.0.0'),
+          Text('Obsah: content_version ${ContentManifest.contentVersion}'),
+          Text(
+            'Integrity: ${ContentManifest.hmacAlgorithm} ($hmacShort)',
+            style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Matematický kurz je plně autorován. Ostatní kurzy čekají na '
+            'materiály od vyučujících (podepsané balíčky s content_version + HMAC). '
+            'Multi-device sync je v1 odloženo.',
+            style: TextStyle(color: cs.onSurfaceVariant),
           ),
         ],
       ),

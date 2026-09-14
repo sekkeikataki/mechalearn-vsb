@@ -4,19 +4,25 @@
 
 Studijní aplikace pro mechatroniku (české UI): cesta dovedností, XP, série, životy, kurzy. Plný obsah má **Matematika pro mechatroniku**; ostatní kurzy jsou prázdné placeholdery pro materiály od vyučujících.
 
-Associated with learning at **VŠB – Technická univerzita Ostrava** (not an official university product; no official logos).
+Associated with learning at **VŠB – Technická univerzita Ostrava** (not an official university product; no official logos or verified official course IDs).
 
 Repository: https://github.com/sekkeikataki/mechalearn-vsb
 
 ## Features / Funkce
 
 - Onboarding s denním cílem XP
-- Domovská „skill path“ cesta lekcí
-- Typy cvičení: výběr z možností, číselná odpověď (tolerance), seřazení kroků, pravda/nepravda + zdůvodnění, vícekrokové úlohy s nápovědami
-- XP, streak, volitelná srdce (životy)
+- Domovská „skill path“ cesta lekcí (odemčení i v engine / routeru, ne jen UI)
+- Typy cvičení: výběr z možností, číselná odpověď (tolerance, česká čárka), seřazení kroků, pravda/nepravda + zdůvodnění, vícekrokové úlohy s nápovědami
+- XP jen přes `AnswerChecker` po grade; streak +1/den (anti clock-skip)
+- Content packs: `content_version` + HMAC integrity (tamper → refuse load)
 - Offline uložení postupu (`shared_preferences`)
 - Kurzy: Matematika (komplet), Fyzika / Elektronika / Mechanika / Řízení / Programování (placeholdery)
 - Material 3, `go_router`, `flutter_riverpod`
+
+## Deferred / Odloženo (v1)
+
+- **Multi-device sync** — synchronizace postupu mezi zařízeními je záměrně odložena. v1 je offline-first na jednom zařízení (`shared_preferences`). Cloud sync / účet přijde později.
+- Symbolický CAS solver — v1 pouze stávající typy cvičení (žádný CAS).
 
 ## Requirements / Požadavky
 
@@ -65,7 +71,9 @@ flutter analyze
 flutter test
 ```
 
-Math content lives in `lib/data/maths/` as typed Dart models (easy to extend with JSON packs later). Course catalog: `lib/data/courses.dart`.
+Math content lives in `lib/data/maths/` as typed Dart models. Integrity: `lib/services/content_integrity.dart` (HMAC over exercise ids/answers). Course catalog: `lib/data/courses.dart`.
+
+Při změně matematického obsahu spusť `dart run tool/compute_content_hmac.dart` a aktualizuj `ContentManifest.contentHmacHex` (případně `contentVersion`).
 
 ## Maths units / Matematické jednotky
 

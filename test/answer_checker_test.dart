@@ -13,6 +13,20 @@ void main() {
       expect(AnswerChecker.checkNumeric(1.02, 1.0, tolerance: 0.01), isFalse);
     });
 
+    test('Czech numeric comma 1,5 equals 1.5', () {
+      const ex = Exercise(
+        id: 'cz',
+        type: ExerciseType.numericFill,
+        prompt: 'x',
+        numericAnswer: 1.5,
+        numericTolerance: 0.01,
+      );
+      expect(AnswerChecker.checkExercise(ex, '1,5'), isTrue);
+      expect(AnswerChecker.parseNumeric('1,5'), 1.5);
+      expect(AnswerChecker.checkExercise(ex, '1.5'), isTrue);
+      expect(AnswerChecker.checkExercise(ex, 'abc'), isFalse);
+    });
+
     test('comma-style via exercise', () {
       const ex = Exercise(
         id: 't',
@@ -24,6 +38,33 @@ void main() {
       expect(AnswerChecker.checkExercise(ex, '3,14'), isTrue);
       expect(AnswerChecker.checkExercise(ex, '3.15'), isTrue);
       expect(AnswerChecker.checkExercise(ex, '3.20'), isFalse);
+    });
+
+    test('strip spaces including thin/nbsp before comma map', () {
+      expect(AnswerChecker.parseNumeric('1 234,5'), 1234.5);
+      expect(AnswerChecker.parseNumeric('1\u00A0234,5'), 1234.5); // nbsp
+      expect(AnswerChecker.parseNumeric('1\u202F234,5'), 1234.5); // thin space
+      expect(AnswerChecker.parseNumeric('  3,14  '), 3.14);
+      const ex = Exercise(
+        id: 'space',
+        type: ExerciseType.numericFill,
+        prompt: 'x',
+        numericAnswer: 1234.5,
+        numericTolerance: 0.01,
+      );
+      expect(AnswerChecker.checkExercise(ex, '1 234,5'), isTrue);
+      expect(AnswerChecker.checkExercise(ex, '1\u202F234,5'), isTrue);
+    });
+
+    test('reject garbage', () {
+      expect(AnswerChecker.parseNumeric('abc'), isNull);
+      expect(AnswerChecker.parseNumeric(''), isNull);
+      expect(AnswerChecker.parseNumeric(null), isNull);
+    });
+
+    test('formatNumericDisplay uses Czech comma', () {
+      expect(AnswerChecker.formatNumericDisplay(3.14), '3,14');
+      expect(AnswerChecker.formatNumericDisplay(2.0), '2');
     });
   });
 
@@ -85,6 +126,7 @@ void main() {
       expect(AnswerChecker.xpForExercise(mc), 10);
       expect(AnswerChecker.xpForExercise(multi), 15);
       expect(AnswerChecker.xpForExercise(mc, perfect: false), 0);
+      expect(AnswerChecker.xpForLesson([mc, multi], completionBonus: 20), 45);
     });
   });
 }

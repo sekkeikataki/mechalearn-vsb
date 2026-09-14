@@ -9,6 +9,9 @@ import 'maths/unit7_komplex.dart';
 import 'maths/unit8_fourier.dart';
 
 /// Katalog kurzů MechaLearn.
+///
+/// Integrity (HMAC) se ověřuje přes [ContentIntegrity] před learning flows —
+/// ne při importu tohoto souboru (aby smoke testy a nástroje mohly číst data).
 final List<Course> allCourses = [
   Course(
     id: 'matematika',
@@ -31,36 +34,36 @@ final List<Course> allCourses = [
   ),
   const Course(
     id: 'fyzika',
-    title: 'Fyzika',
-    description: 'Materiály od vyučujících — připraveno jako prázdný kurz.',
+    title: 'Fyzika (placeholder)',
+    description: 'Placeholder pro materiály od vyučujících — není oficiální kód předmětu VŠB.',
     iconEmoji: '⚛️',
     isPlaceholder: true,
   ),
   const Course(
     id: 'elektronika',
-    title: 'Elektronika',
-    description: 'Materiály od vyučujících — připraveno jako prázdný kurz.',
+    title: 'Elektronika (placeholder)',
+    description: 'Placeholder pro materiály od vyučujících — není oficiální kód předmětu VŠB.',
     iconEmoji: '🔌',
     isPlaceholder: true,
   ),
   const Course(
     id: 'mechanika',
-    title: 'Mechanika',
-    description: 'Materiály od vyučujících — připraveno jako prázdný kurz.',
+    title: 'Mechanika (placeholder)',
+    description: 'Placeholder pro materiály od vyučujících — není oficiální kód předmětu VŠB.',
     iconEmoji: '⚙️',
     isPlaceholder: true,
   ),
   const Course(
     id: 'rizeni',
-    title: 'Řízení a automatizace',
-    description: 'Materiály od vyučujících — připraveno jako prázdný kurz.',
+    title: 'Řízení a automatizace (placeholder)',
+    description: 'Placeholder pro materiály od vyučujících — není oficiální kód předmětu VŠB.',
     iconEmoji: '🎛️',
     isPlaceholder: true,
   ),
   const Course(
     id: 'programovani',
-    title: 'Programování / vestavěné systémy',
-    description: 'Materiály od vyučujících — připraveno jako prázdný kurz.',
+    title: 'Programování / vestavěné systémy (placeholder)',
+    description: 'Placeholder pro materiály od vyučujících — není oficiální kód předmětu VŠB.',
     iconEmoji: '💻',
     isPlaceholder: true,
   ),

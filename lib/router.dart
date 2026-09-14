@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'data/courses.dart';
 import 'providers/progress_provider.dart';
 import 'screens/about_screen.dart';
 import 'screens/courses_hub_screen.dart';
@@ -11,6 +12,7 @@ import 'screens/onboarding_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/shell_scaffold.dart';
+import 'services/progress_service.dart';
 
 final _rootKey = GlobalKey<NavigatorState>();
 final _shellKey = GlobalKey<NavigatorState>();
@@ -27,6 +29,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       final onboarding = state.matchedLocation == '/onboarding';
       if (!p.onboarded && !onboarding) return '/onboarding';
       if (p.onboarded && onboarding) return '/home';
+
+      // Engine unlock gate: deep link /lesson/:id must not bypass lock.
+      final lessonId = state.pathParameters['lessonId'];
+      if (lessonId != null && state.matchedLocation.startsWith('/lesson/')) {
+        final catalog =
+            courseById(p.activeCourseId ?? 'matematika') ?? allCourses.first;
+        if (!ProgressService.canPlayLesson(lessonId, p, catalog)) {
+          return '/home';
+        }
+      }
       return null;
     },
     routes: [

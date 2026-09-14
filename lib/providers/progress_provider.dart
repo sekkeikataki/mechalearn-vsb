@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../models/exercise.dart';
 import '../models/user_progress.dart';
+import '../services/answer_checker.dart';
 import '../services/progress_service.dart';
 
 final progressServiceProvider = Provider<ProgressService>((ref) {
@@ -60,24 +62,25 @@ class ProgressNotifier extends AsyncNotifier<UserProgress> {
     await _persist(p.copyWith(hearts: p.heartsMax));
   }
 
+  /// Udělení XP za lekci — XP výhradně přes [AnswerChecker.xpForLesson].
+  /// Best-of: opakování nepřidá XP nad již zaznamenané maximum lekce.
   Future<void> awardLesson({
     required String lessonId,
-    required int earnedXp,
+    required List<Exercise> gradedCorrect,
+    int completionBonus = 0,
   }) async {
-    var p = state.value ?? const UserProgress();
-    p = ProgressService.applyStreak(p, DateTime.now());
-    final completed = {...p.completedLessons, lessonId};
-    final best = Map<String, int>.from(p.lessonBestXp);
-    final prev = best[lessonId] ?? 0;
-    if (earnedXp > prev) best[lessonId] = earnedXp;
-    await _service.addTodayXp(earnedXp);
-    await _persist(
-      p.copyWith(
-        xp: p.xp + earnedXp,
-        completedLessons: completed,
-        lessonBestXp: best,
-      ),
+    final earnedXp = AnswerChecker.xpForLesson(
+      gradedCorrect,
+      completionBonus: completionBonus,
     );
+    final p = state.value ?? const UserProgress();
+    final result = ProgressService.applyLessonAward(
+      p,
+      lessonId: lessonId,
+      earnedXp: earnedXp,
+    );
+    await _service.addTodayXp(result.xpDelta);
+    await _persist(result.progress);
   }
 
   Future<void> resetProgress() async {

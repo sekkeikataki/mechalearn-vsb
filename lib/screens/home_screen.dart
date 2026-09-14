@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../data/courses.dart';
+import '../models/course.dart';
 import '../models/lesson.dart';
 import '../models/unit.dart';
 import '../providers/progress_provider.dart';
+import '../services/progress_service.dart';
 import '../widgets/stat_chips.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -75,7 +77,11 @@ class HomeScreen extends ConsumerWidget {
                   ),
                 )
               else
-                ..._buildPath(context, course.units, progress.completedLessons),
+                ..._buildPath(
+                  context,
+                  course,
+                  progress.completedLessons,
+                ),
             ],
           ),
         );
@@ -85,18 +91,22 @@ class HomeScreen extends ConsumerWidget {
 
   List<Widget> _buildPath(
     BuildContext context,
-    List<Unit> units,
+    Course course,
     Set<String> completed,
   ) {
+    final units = course.units;
     final widgets = <Widget>[];
-    var previousComplete = true;
     for (var u = 0; u < units.length; u++) {
       final unit = units[u];
       widgets.add(_UnitHeader(unit: unit, index: u + 1));
       for (var i = 0; i < unit.lessons.length; i++) {
         final lesson = unit.lessons[i];
         final done = completed.contains(lesson.id);
-        final unlocked = previousComplete;
+        final unlocked = ProgressService.canStartLesson(
+          lesson.id,
+          completed,
+          course: course,
+        );
         widgets.add(
           _LessonNode(
             lesson: lesson,
@@ -108,7 +118,6 @@ class HomeScreen extends ConsumerWidget {
                 : null,
           ),
         );
-        previousComplete = done;
       }
     }
     return widgets;

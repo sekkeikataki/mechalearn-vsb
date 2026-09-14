@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../data/courses.dart';
 import '../data/lesson_index.dart';
 import '../models/exercise.dart';
 import '../providers/progress_provider.dart';
 import '../services/answer_checker.dart';
+import '../services/content_integrity.dart';
+import '../services/progress_service.dart';
 import '../widgets/exercises/exercise_view.dart';
 
 class LessonPlayerScreen extends ConsumerStatefulWidget {
@@ -20,8 +23,7 @@ class LessonPlayerScreen extends ConsumerStatefulWidget {
 class _LessonPlayerScreenState extends ConsumerState<LessonPlayerScreen> {
   int _index = -1; // -1 = intro
   dynamic _currentAnswer;
-  int _earnedXp = 0;
-  int _correctCount = 0;
+  final List<Exercise> _gradedCorrect = [];
   String? _feedback;
   bool? _lastCorrect;
 
@@ -35,7 +37,97 @@ class _LessonPlayerScreenState extends ConsumerState<LessonPlayerScreen> {
       );
     }
 
-    final progress = ref.watch(progressProvider).value;
+    final progressAsync = ref.watch(progressProvider);
+    final progress = progressAsync.value;
+
+    // Content integrity gate — refuse learning on HMAC mismatch.
+    try {
+      ContentIntegrity.verifyOrThrow(allCourses);
+    } on ContentIntegrityException catch (e) {
+      return Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: () => context.go('/home'),
+          ),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.gpp_bad_outlined,
+                    size: 48, color: Theme.of(context).colorScheme.error),
+                const SizedBox(height: 16),
+                Text(
+                  e.message,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                FilledButton(
+                  onPressed: () => context.go('/home'),
+                  child: const Text('Zpět domů'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    final catalog = progress == null
+        ? null
+        : (courseById(progress.activeCourseId ?? 'matematika') ??
+            allCourses.first);
+
+    // Engine unlock gate (defense in depth vs deep link / direct push).
+    if (progress != null &&
+        catalog != null &&
+        !ProgressService.canPlayLesson(widget.lessonId, progress, catalog)) {
+      return Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: () => context.go('/home'),
+          ),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.lock,
+                    size: 48, color: Theme.of(context).colorScheme.outline),
+                const SizedBox(height: 16),
+                Text(
+                  'Lekce je zamčená',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Nejdřív dokonči předchozí lekce na cestě.',
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                FilledButton(
+                  onPressed: () => context.go('/home'),
+                  child: const Text('Zpět domů'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     final total = lesson.exercises.length;
     final inIntro = _index < 0;
     final finished = _index >= total;
@@ -167,6 +259,29 @@ class _LessonPlayerScreenState extends ConsumerState<LessonPlayerScreen> {
   }
 
   Future<void> _check(Exercise exercise) async {
+    final progress = ref.read(progressProvider).value;
+    if (progress == null) return;
+    final catalog =
+        courseById(progress.activeCourseId ?? 'matematika') ?? allCourses.first;
+
+    try {
+      ContentIntegrity.verifyOrThrow(allCourses);
+    } on ContentIntegrityException catch (e) {
+      setState(() {
+        _lastCorrect = false;
+        _feedback = e.message;
+      });
+      return;
+    }
+
+    if (!ProgressService.canPlayLesson(widget.lessonId, progress, catalog)) {
+      setState(() {
+        _lastCorrect = false;
+        _feedback = 'Lekce je zamčená';
+      });
+      return;
+    }
+
     // order: if never reordered, emit current order
     var answer = _currentAnswer;
     if (exercise.type == ExerciseType.orderSteps && answer == null) {
@@ -180,15 +295,16 @@ class _LessonPlayerScreenState extends ConsumerState<LessonPlayerScreen> {
       }
     }
 
+    // Sole grader — AnswerChecker.
     final ok = AnswerChecker.checkExercise(exercise, answer);
     if (ok) {
       final xp = AnswerChecker.xpForExercise(exercise);
       setState(() {
         _lastCorrect = true;
-        _correctCount++;
-        _earnedXp += xp;
-        _feedback =
-            'Správně! +$xp XP\n${exercise.explanation ?? ''}';
+        if (!_gradedCorrect.any((e) => e.id == exercise.id)) {
+          _gradedCorrect.add(exercise);
+        }
+        _feedback = 'Správně! +$xp XP\n${exercise.explanation ?? ''}';
       });
     } else {
       final canContinue =
@@ -231,7 +347,10 @@ class _LessonPlayerScreenState extends ConsumerState<LessonPlayerScreen> {
   }
 
   Widget _summary(int bonus) {
-    final totalXp = _earnedXp + (_correctCount > 0 ? bonus : 0);
+    final totalXp = AnswerChecker.xpForLesson(
+      _gradedCorrect,
+      completionBonus: _gradedCorrect.isNotEmpty ? bonus : 0,
+    );
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -250,7 +369,7 @@ class _LessonPlayerScreenState extends ConsumerState<LessonPlayerScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Správně: $_correctCount\nZískáno XP: $totalXp',
+            'Správně: ${_gradedCorrect.length}\nZískáno XP: $totalXp',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.titleMedium,
           ),
@@ -259,7 +378,9 @@ class _LessonPlayerScreenState extends ConsumerState<LessonPlayerScreen> {
             onPressed: () async {
               await ref.read(progressProvider.notifier).awardLesson(
                     lessonId: widget.lessonId,
-                    earnedXp: totalXp,
+                    gradedCorrect: List<Exercise>.from(_gradedCorrect),
+                    completionBonus:
+                        _gradedCorrect.isNotEmpty ? bonus : 0,
                   );
               if (mounted) context.pop();
             },

@@ -1,7 +1,29 @@
 import '../models/exercise.dart';
 
 /// Kontrola odpovědí — numerické s tolerancí, MCQ, pořadí, ano/ne.
+/// Jediný grader v aplikaci; XP jen přes [xpForExercise] / [xpForLesson].
 class AnswerChecker {
+  /// Parsování čísla v české locale: ořízne mezery, `,`→`.` (jeden krok), pak double.
+  static double? parseNumeric(dynamic raw) {
+    if (raw is double) return raw;
+    if (raw is int) return raw.toDouble();
+    if (raw == null) return null;
+    var s = raw.toString().trim();
+    // mezery včetně nezlomitelných
+    s = s.replaceAll(RegExp(r'[\s\u00A0\u202F]'), '');
+    if (s.isEmpty) return null;
+    // mapuj čárku na tečku (jeden průchod nahrazení)
+    s = s.replaceAll(',', '.');
+    return double.tryParse(s);
+  }
+
+  /// Formátování pro zobrazení — česká desetinná čárka.
+  static String formatNumericDisplay(double value, {int maxDecimals = 4}) {
+    var s = value.toStringAsFixed(maxDecimals);
+    s = s.replaceFirst(RegExp(r'\.?0+$'), '');
+    return s.replaceAll('.', ',');
+  }
+
   /// Porovná numerickou odpověď s absolutní tolerancí.
   static bool checkNumeric(
     double userAnswer,
@@ -31,9 +53,7 @@ class AnswerChecker {
       case ExerciseType.multipleChoice:
         return checkMultipleChoice(answer as int, exercise.correctIndex!);
       case ExerciseType.numericFill:
-        final v = answer is double
-            ? answer
-            : double.tryParse(answer.toString().replaceAll(',', '.'));
+        final v = parseNumeric(answer);
         if (v == null) return false;
         return checkNumeric(v, exercise.numericAnswer!,
             tolerance: exercise.numericTolerance);
@@ -67,9 +87,7 @@ class AnswerChecker {
       case ExerciseType.multipleChoice:
         return checkMultipleChoice(answer as int, part.correctIndex!);
       case ExerciseType.numericFill:
-        final v = answer is double
-            ? answer
-            : double.tryParse(answer.toString().replaceAll(',', '.'));
+        final v = parseNumeric(answer);
         if (v == null) return false;
         return checkNumeric(v, part.numericAnswer!,
             tolerance: part.numericTolerance);
@@ -80,7 +98,7 @@ class AnswerChecker {
     }
   }
 
-  /// XP za správnou odpověď (základ 10, multi-step 15).
+  /// XP za správnou odpověď (základ 10, multi-step 15). Jediný zdroj XP za cvičení.
   static int xpForExercise(Exercise exercise, {bool perfect = true}) {
     if (!perfect) return 0;
     switch (exercise.type) {
@@ -91,5 +109,21 @@ class AnswerChecker {
       default:
         return 10;
     }
+  }
+
+  /// XP za lekci: součet [xpForExercise] + bonus za dokončení (jen pokud ≥1 správně).
+  /// Nikdy nepřijímá klientem nastavené XP mimo tento výpočet.
+  static int xpForLesson(
+    List<Exercise> gradedCorrect, {
+    int completionBonus = 0,
+  }) {
+    var xp = 0;
+    for (final e in gradedCorrect) {
+      xp += xpForExercise(e);
+    }
+    if (gradedCorrect.isNotEmpty && completionBonus > 0) {
+      xp += completionBonus;
+    }
+    return xp;
   }
 }

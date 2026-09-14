@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../models/exercise.dart';
+import '../../services/answer_checker.dart';
 
 typedef AnswerChanged = void Function(dynamic answer);
 
@@ -171,16 +172,16 @@ class _ExerciseViewState extends State<ExerciseView> {
           signed: true,
         ),
         inputFormatters: [
-          FilteringTextInputFormatter.allow(RegExp(r'[0-9,.\-]')),
+          FilteringTextInputFormatter.allow(RegExp(r'[0-9,.\-\s]')),
         ],
         decoration: const InputDecoration(
           labelText: 'Odpověď',
           border: OutlineInputBorder(),
-          hintText: 'Např. 3.14 nebo 3,14',
+          hintText: 'Např. 3,14',
+          helperText: 'Desetinná čárka (české UI)',
         ),
         onChanged: (s) {
-          final v = double.tryParse(s.replaceAll(',', '.'));
-          widget.onAnswerChanged(v);
+          widget.onAnswerChanged(AnswerChecker.parseNumeric(s));
         },
       ),
     ];
@@ -299,8 +300,7 @@ class _ExerciseViewState extends State<ExerciseView> {
             border: OutlineInputBorder(),
           ),
           onChanged: (s) {
-            final v = double.tryParse(s.replaceAll(',', '.'));
-            _setStepAnswer(v);
+            _setStepAnswer(AnswerChecker.parseNumeric(s));
           },
         ),
       const SizedBox(height: 8),
@@ -332,9 +332,7 @@ class _ExerciseViewState extends State<ExerciseView> {
                         _stepAnswers.add(
                           part.type == ExerciseType.multipleChoice
                               ? _mc
-                              : double.tryParse(
-                                  _numCtrl.text.replaceAll(',', '.'),
-                                ),
+                              : AnswerChecker.parseNumeric(_numCtrl.text),
                         );
                         _step++;
                         _mc = null;

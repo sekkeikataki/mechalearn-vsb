@@ -10,6 +10,9 @@ class UserProgress {
   final Set<String> completedLessons;
   final String? activeCourseId;
   final Map<String, int> lessonBestXp;
+  /// Content pack version last stamped onto this progress JSON.
+  /// If stored != current manifest: keep progress; never remap deleted IDs.
+  final String? contentVersion;
 
   const UserProgress({
     this.onboarded = false,
@@ -23,6 +26,7 @@ class UserProgress {
     this.completedLessons = const {},
     this.activeCourseId = 'matematika',
     this.lessonBestXp = const {},
+    this.contentVersion,
   });
 
   UserProgress copyWith({
@@ -37,6 +41,7 @@ class UserProgress {
     Set<String>? completedLessons,
     String? activeCourseId,
     Map<String, int>? lessonBestXp,
+    String? contentVersion,
   }) {
     return UserProgress(
       onboarded: onboarded ?? this.onboarded,
@@ -50,6 +55,7 @@ class UserProgress {
       completedLessons: completedLessons ?? this.completedLessons,
       activeCourseId: activeCourseId ?? this.activeCourseId,
       lessonBestXp: lessonBestXp ?? this.lessonBestXp,
+      contentVersion: contentVersion ?? this.contentVersion,
     );
   }
 
@@ -65,6 +71,7 @@ class UserProgress {
         'completedLessons': completedLessons.toList(),
         'activeCourseId': activeCourseId,
         'lessonBestXp': lessonBestXp,
+        'contentVersion': contentVersion,
       };
 
   factory UserProgress.fromJson(Map<String, dynamic> json) {
@@ -87,6 +94,7 @@ class UserProgress {
             ) ??
             {},
       ),
+      contentVersion: json['contentVersion'] as String?,
     );
   }
 }
