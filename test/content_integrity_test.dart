@@ -1,78 +1,35 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mechalearn_vsb/data/content_manifest.dart';
 import 'package:mechalearn_vsb/data/courses.dart';
-import 'package:mechalearn_vsb/models/course.dart';
-import 'package:mechalearn_vsb/models/exercise.dart';
-import 'package:mechalearn_vsb/models/lesson.dart';
-import 'package:mechalearn_vsb/models/unit.dart';
+import 'package:mechalearn_vsb/models/user_progress.dart';
 import 'package:mechalearn_vsb/services/content_integrity.dart';
+import 'package:mechalearn_vsb/services/progress_service.dart';
 
+/// PATCH v1.1.1: HMAC refuse-on-tamper is struck for offline v1.
+/// content_version may be stamped on progress; integrity helpers remain for tooling.
 void main() {
-  test('shipped curriculum HMAC matches manifest', () {
-    expect(ContentIntegrity.verify(allCourses), isTrue);
-    expect(
-      ContentIntegrity.computeHmacHex(allCourses),
-      ContentManifest.contentHmacHex,
-    );
+  test('content_version is defined for progress migrations', () {
     expect(ContentManifest.contentVersion, isNotEmpty);
-    expect(ContentManifest.hmacAlgorithm, 'HmacSHA256');
+    expect(ContentManifest.contentVersion, '1.1.0');
   });
 
-  test('HMAC mismatch refuse with Czech message', () {
-    final tampered = [
-      Course(
-        id: 'matematika',
-        title: 'T',
-        description: 'd',
-        iconEmoji: 'x',
-        units: [
-          Unit(
-            id: 'u',
-            title: 'U',
-            description: 'd',
-            iconEmoji: 'x',
-            lessons: [
-              Lesson(
-                id: 'l1',
-                title: 'L',
-                intro: 'i',
-                exercises: [
-                  const Exercise(
-                    id: 'e1',
-                    type: ExerciseType.numericFill,
-                    prompt: '1+1',
-                    numericAnswer: 999,
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ],
-      ),
-    ];
-
-    expect(ContentIntegrity.verify(tampered), isFalse);
-    expect(
-      () => ContentIntegrity.verifyOrThrow(tampered),
-      throwsA(
-        isA<ContentIntegrityException>().having(
-          (e) => e.message,
-          'message',
-          contains('Kontrola integrity obsahu selhala'),
-        ),
-      ),
+  test('progress stamps content_version on award (no HMAC gate)', () {
+    final math = courseById('matematika')!;
+    final lessonId = math.units.first.lessons.first.id;
+    final r = ProgressService.applyLessonAward(
+      const UserProgress(),
+      lessonId: lessonId,
+      earnedXp: 10,
+      now: DateTime(2026, 9, 14),
+      course: math,
     );
+    expect(r.progress.contentVersion, ContentManifest.contentVersion);
   });
 
-  test('canonical / signed payload is stable and ordered', () {
-    final payload = ContentIntegrity.canonicalPayload(allCourses);
-    expect(payload.isNotEmpty, isTrue);
-    final lines = payload.split('\n');
-    expect(lines.length, 400);
-    expect(lines.first.startsWith('matematika|'), isTrue);
-    expect(
-      ContentIntegrity.signedPayload(allCourses),
-      startsWith('content_version=${ContentManifest.contentVersion}\n'),
-    );
+  test('optional integrity helper still hashes curriculum (tooling only)', () {
+    final hex = ContentIntegrity.computeHmacHex(allCourses);
+    expect(hex.length, 64);
+    // Not required to match manifest for app load (HMAC gate struck).
+    expect(ContentIntegrity.canonicalPayload(allCourses).split('\n').length, 400);
   });
 }

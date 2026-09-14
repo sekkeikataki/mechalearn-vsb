@@ -7,7 +7,6 @@ import '../data/lesson_index.dart';
 import '../models/exercise.dart';
 import '../providers/progress_provider.dart';
 import '../services/answer_checker.dart';
-import '../services/content_integrity.dart';
 import '../services/progress_service.dart';
 import '../widgets/exercises/exercise_view.dart';
 
@@ -39,45 +38,6 @@ class _LessonPlayerScreenState extends ConsumerState<LessonPlayerScreen> {
 
     final progressAsync = ref.watch(progressProvider);
     final progress = progressAsync.value;
-
-    // Content integrity gate — refuse learning on HMAC mismatch.
-    try {
-      ContentIntegrity.verifyOrThrow(allCourses);
-    } on ContentIntegrityException catch (e) {
-      return Scaffold(
-        appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.close),
-            onPressed: () => context.go('/home'),
-          ),
-        ),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.gpp_bad_outlined,
-                    size: 48, color: Theme.of(context).colorScheme.error),
-                const SizedBox(height: 16),
-                Text(
-                  e.message,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 24),
-                FilledButton(
-                  onPressed: () => context.go('/home'),
-                  child: const Text('Zpět domů'),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
 
     final catalog = progress == null
         ? null
@@ -263,16 +223,6 @@ class _LessonPlayerScreenState extends ConsumerState<LessonPlayerScreen> {
     if (progress == null) return;
     final catalog =
         courseById(progress.activeCourseId ?? 'matematika') ?? allCourses.first;
-
-    try {
-      ContentIntegrity.verifyOrThrow(allCourses);
-    } on ContentIntegrityException catch (e) {
-      setState(() {
-        _lastCorrect = false;
-        _feedback = e.message;
-      });
-      return;
-    }
 
     if (!ProgressService.canPlayLesson(widget.lessonId, progress, catalog)) {
       setState(() {

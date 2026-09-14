@@ -9,9 +9,6 @@ class AboutScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final hmacShort = ContentManifest.contentHmacHex.length >= 12
-        ? '${ContentManifest.contentHmacHex.substring(0, 12)}…'
-        : ContentManifest.contentHmacHex;
     return Scaffold(
       appBar: AppBar(title: const Text('O aplikaci')),
       body: ListView(
@@ -90,7 +87,7 @@ class AboutScreen extends StatelessWidget {
           const Text('Verze aplikace 1.0.0'),
           Text('Obsah: content_version ${ContentManifest.contentVersion}'),
           Text(
-            'Integrity: ${ContentManifest.hmacAlgorithm} ($hmacShort)',
+            'Integrity HMAC refuse-on-tamper: odloženo (offline v1 / PATCH v1.1.1).',
             style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
           ),
           const SizedBox(height: 8),
