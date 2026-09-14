@@ -18,6 +18,7 @@ Repository: https://github.com/sekkeikataki/mechalearn-vsb
 - Offline uložení postupu (`shared_preferences`)
 - Kurzy: Matematika (komplet), Fyzika / Elektronika / Mechanika / Řízení / Programování (placeholdery)
 - Material 3, `go_router`, `flutter_riverpod`
+- **Web** target for one-click browser access (`flutter run -d chrome` / `build/web`)
 
 ## Deferred / Odloženo (v1)
 
@@ -29,6 +30,7 @@ Repository: https://github.com/sekkeikataki/mechalearn-vsb
 - Flutter stable (3.24+ recommended; developed on 3.47)
 - For **Linux desktop**: `clang`, `cmake`, `ninja-build`, `pkg-config`, `libgtk-3-dev`
 - For **Android**: Android SDK / Android Studio
+- For **Web**: Chrome (or any modern browser); `flutter config --enable-web`
 
 ## Run on Arch Linux
 
@@ -63,6 +65,25 @@ flutter build apk --release
 ```
 
 Install APK from `build/app/outputs/flutter-apk/app-release.apk`.
+
+
+## Run in the browser (Web)
+
+One-click local access — no desktop/Android toolchain required for trying the app:
+
+```bash
+flutter config --enable-web
+flutter pub get
+flutter run -d chrome
+# or: flutter run -d web-server --web-hostname=0.0.0.0 --web-port=8080
+```
+
+Release static build (serve `build/web` with any static file server):
+
+```bash
+flutter build web --release
+# Output: build/web/  (open index.html via a local HTTP server)
+```
 
 ## Develop / Vývoj
 
